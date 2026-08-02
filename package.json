@@ -1,0 +1,10 @@
+{
+  "name": "cpc-fuel-rewards-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "台灣中油六種加油方式精確回饋計算與動態排名",
+  "scripts": {
+    "test": "node --test calculator.test.mjs",
+    "serve": "python3 -m http.server 8080"
+  }
+}

@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#eaf5ff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0b1525" media="(prefers-color-scheme: dark)">
+    <link rel="icon" href="data:,">
+    <meta
+      name="description"
+      content="比較各種情況哪種方式加油比較划算，依台灣中油 98、95、92 牌價即時計算六種加油方案的精確回饋率與排名。"
+    >
+    <title>比較各種情況哪種方式加油比較划算-台灣中油版</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="calculator.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到主要內容</a>
+
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="#top" aria-label="台灣中油加油方式比較首頁">
+          <span class="brand-mark" aria-hidden="true">算</span>
+          <span>
+            <strong>加油方式比較</strong>
+            <small>台灣中油・六方案精算</small>
+          </span>
+        </a>
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="切換深淺色模式">
+          <span class="theme-icon" aria-hidden="true">◐</span>
+          <span class="theme-label">自動</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="hero shell" id="top" aria-labelledby="page-title">
+        <div class="hero-cover glass-card">
+          <img
+            class="hero-image"
+            src="assets/hero-cover.png"
+            width="1672"
+            height="941"
+            alt="深海軍藍與鉑金玻璃交疊而成的高端抽象商業視覺"
+            fetchpriority="high"
+          >
+          <div class="hero-image-shade" aria-hidden="true"></div>
+          <div class="hero-copy">
+            <h1 id="page-title">
+              <span>比較各種情況</span>
+              <span>哪種方式加油比較划算</span>
+              <span class="title-edition">-台灣中油版</span>
+            </h1>
+          </div>
+        </div>
+      </section>
+
+      <section class="shell calculator-panel glass-card" aria-labelledby="price-heading">
+        <div class="section-heading compact">
+          <div>
+            <p class="section-kicker">目前油價</p>
+            <h2 id="price-heading">輸入三種汽油牌價</h2>
+          </div>
+          <p>支援小數，調整後即時計算</p>
+        </div>
+
+        <form id="calculator-form" novalidate>
+          <div class="price-grid">
+            <div class="price-field grade-98">
+              <label for="price-98">
+                <span class="fuel-grade">98</span>
+                <span>無鉛牌價</span>
+              </label>
+              <div class="input-with-unit">
+                <span class="currency" aria-hidden="true">$</span>
+                <input
+                  id="price-98"
+                  name="price-98"
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  inputmode="decimal"
+                  value="34.0"
+                  aria-describedby="price-98-hint price-98-error"
+                >
+                <span>元／L</span>
+              </div>
+              <p class="field-hint" id="price-98-hint">預設 34.0 元</p>
+              <p class="field-error" id="price-98-error" role="alert"></p>
+            </div>
+
+            <div class="price-field grade-95">
+              <label for="price-95">
+                <span class="fuel-grade">95</span>
+                <span>無鉛牌價</span>
+              </label>
+              <div class="input-with-unit">
+                <span class="currency" aria-hidden="true">$</span>
+                <input
+                  id="price-95"
+                  name="price-95"
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  inputmode="decimal"
+                  value="32.0"
+                  aria-describedby="price-95-hint price-95-error"
+                >
+                <span>元／L</span>
+              </div>
+              <p class="field-hint" id="price-95-hint">預設 32.0 元</p>
+              <p class="field-error" id="price-95-error" role="alert"></p>
+            </div>
+
+            <div class="price-field grade-92">
+              <label for="price-92">
+                <span class="fuel-grade">92</span>
+                <span>無鉛牌價</span>
+              </label>
+              <div class="input-with-unit">
+                <span class="currency" aria-hidden="true">$</span>
+                <input
+                  id="price-92"
+                  name="price-92"
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  inputmode="decimal"
+                  value="30.5"
+                  aria-describedby="price-92-hint price-92-error"
+                >
+                <span>元／L</span>
+              </div>
+              <p class="field-hint" id="price-92-hint">預設 30.5 元</p>
+              <p class="field-error" id="price-92-error" role="alert"></p>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="button primary" id="recalculate" type="submit">
+              <span aria-hidden="true">↻</span>重新計算
+            </button>
+            <button class="button secondary" id="reset-defaults" type="button">恢復預設值</button>
+            <div class="update-status">
+              <span class="status-dot" aria-hidden="true"></span>
+              <span id="last-updated">準備計算中</span>
+            </div>
+          </div>
+
+          <details class="advanced-settings" id="advanced-settings">
+            <summary>
+              <span>
+                <strong>進階設定</strong>
+                <small>本金、回饋率、卡別與點數估值</small>
+              </span>
+              <span class="summary-action">展開調整</span>
+            </summary>
+
+            <div class="advanced-body">
+              <div class="advanced-grid">
+                <div class="field-group">
+                  <label for="principal">比較本金</label>
+                  <div class="compact-input"><input id="principal" type="number" min="0.01" step="500" value="3000" inputmode="decimal"><span>元</span></div>
+                  <p>實際拿出的金額 A</p>
+                  <p class="field-error" id="principal-error" role="alert"></p>
+                </div>
+
+                <div class="field-group">
+                  <label for="recharge-rate">捷利卡儲值回饋率</label>
+                  <div class="compact-input"><input id="recharge-rate" type="number" min="0" step="0.1" value="4" inputmode="decimal"><span>%</span></div>
+                  <p>星期一行動捷利卡活動</p>
+                  <p class="field-error" id="rechargeRate-error" role="alert"></p>
+                </div>
+
+                <div class="field-group">
+                  <label for="self-discount">自助每公升折扣</label>
+                  <div class="compact-input"><input id="self-discount" type="number" min="0" step="0.1" value="0.8" inputmode="decimal"><span>元</span></div>
+                  <p>從牌價扣除的固定金額 d</p>
+                  <p class="field-error" id="selfServiceDiscount-error" role="alert"></p>
+                </div>
+
+                <div class="field-group">
+                  <label for="card-type">中油聯名卡卡別</label>
+                  <div class="select-wrap">
+                    <select id="card-type">
+                      <option value="signature">御璽卡｜每滿 30 元 3 點</option>
+                      <option value="platinum">白金卡｜每滿 30 元 2 點</option>
+                    </select>
+                  </div>
+                  <p>紅利點數按每滿 30 元取整</p>
+                  <p class="field-error" id="cardType-error" role="alert"></p>
+                </div>
+
+                <div class="field-group">
+                  <label for="ctbc-point-value">中信紅利每點價值</label>
+                  <div class="compact-input"><input id="ctbc-point-value" type="number" min="0" step="0.01" value="0.08" inputmode="decimal"><span>元</span></div>
+                  <p>預設每點估值 0.08 元</p>
+                  <p class="field-error" id="ctbcPointValue-error" role="alert"></p>
+                </div>
+
+                <div class="field-group">
+                  <label for="vip-points-per-dollar">人工加油每元 VIP 點數</label>
+                  <div class="compact-input"><input id="vip-points-per-dollar" type="number" min="0" step="1" value="2" inputmode="numeric"><span>點</span></div>
+                  <p>預設活動雙倍點數</p>
+                  <p class="field-error" id="vipPointsPerDollar-error" role="alert"></p>
+                </div>
+
+                <div class="field-group">
+                  <label for="vip-fuel-value">VIP 折油每點價值</label>
+                  <div class="compact-input"><input id="vip-fuel-value" type="number" min="0" step="0.001" value="0.005" inputmode="decimal"><span>元</span></div>
+                  <p>折抵油錢的估值</p>
+                  <p class="field-error" id="vipFuelPointValue-error" role="alert"></p>
+                </div>
+
+                <div class="field-group">
+                  <label for="vip-premium-value">VIP 購買副產品每點價值</label>
+                  <div class="compact-input"><input id="vip-premium-value" type="number" min="0" step="0.001" value="0.01" inputmode="decimal"><span>元</span></div>
+                  <p>複合商店、洗車、快保估值</p>
+                  <p class="field-error" id="vipPremiumPointValue-error" role="alert"></p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <div id="validation-summary" class="validation-summary" role="alert" hidden></div>
+          <div id="activity-warning" class="activity-warning" role="status" hidden></div>
+          <p class="sr-only" id="calculation-live" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <div id="results" class="results" aria-live="off">
+        <section class="shell section-block" aria-labelledby="best-heading">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">即時結論</p>
+              <h2 id="best-heading">三種油品最佳方案</h2>
+            </div>
+            <p>依精確有效回饋率排序</p>
+          </div>
+          <div class="best-grid" id="best-summary"></div>
+        </section>
+
+        <section class="shell section-block chart-section" aria-labelledby="chart-heading">
+          <div class="section-heading chart-title-row">
+            <div>
+              <p class="section-kicker">視覺比較</p>
+              <h2 id="chart-heading">精確有效回饋率</h2>
+            </div>
+            <div class="segmented-control" role="group" aria-label="切換圖表油品">
+              <button type="button" data-chart-grade="98" class="active" aria-pressed="true">98</button>
+              <button type="button" data-chart-grade="95" aria-pressed="false">95</button>
+              <button type="button" data-chart-grade="92" aria-pressed="false">92</button>
+            </div>
+          </div>
+          <div class="glass-card chart-card" id="reward-chart"></div>
+          <p class="chart-note">長條長度代表精確有效回饋率；方案顏色固定，不隨名次改變。</p>
+        </section>
+
+        <section class="shell section-block" aria-labelledby="ranking-heading">
+          <div class="section-heading ranking-heading-row">
+            <div>
+              <p class="section-kicker">完整比較</p>
+              <h2 id="ranking-heading">98・95・92 動態排名<span class="heading-qualifier">（完整比較）</span></h2>
+              <p class="section-support">表格欄位與計算過程完整保留，選擇油品即可切換查看。</p>
+            </div>
+            <div class="ranking-tabs" role="group" aria-label="切換完整排名油品">
+              <button type="button" data-ranking-grade="98" aria-pressed="true" aria-controls="ranking-tables" class="active">98 無鉛汽油排名</button>
+              <button type="button" data-ranking-grade="95" aria-pressed="false" aria-controls="ranking-tables">95 無鉛汽油排名</button>
+              <button type="button" data-ranking-grade="92" aria-pressed="false" aria-controls="ranking-tables">92 無鉛汽油排名</button>
+            </div>
+          </div>
+          <div id="ranking-tables" class="ranking-sections"></div>
+        </section>
+
+        <section class="shell section-block" aria-labelledby="comparison-heading">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">橫向看差異</p>
+              <h2 id="comparison-heading">三油品綜合比較表</h2>
+            </div>
+            <p>相同方法在不同牌價下的名次與成本</p>
+          </div>
+          <div class="table-scroll comparison-scroll" tabindex="0" aria-label="可左右捲動查看三油品綜合比較表">
+            <div id="comparison-table"></div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </body>
+</html>
