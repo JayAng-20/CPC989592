@@ -12,6 +12,7 @@
   "use strict";
 
   const STORAGE_KEY = "cpc-fuel-rewards-calculator:v1";
+  const THEME_STORAGE_KEY = "cpc-fuel-rewards-theme";
   const STORAGE_VERSION = 1;
   const ALMOST_TIE_THRESHOLD = 0.001;
 
@@ -110,6 +111,28 @@
 
   function isFiniteNumber(value) {
     return Number.isFinite(toNumber(value));
+  }
+
+  function calculateEffectiveUnitPrice(rawPrice, rawDiscount, mode = "self-service") {
+    const price = toNumber(rawPrice);
+    const discount = toNumber(rawDiscount);
+
+    if (!Number.isFinite(price) || price <= 0) {
+      throw new RangeError("人工牌價必須是大於 0 的有效數字。");
+    }
+    if (mode === "manual") return price;
+    if (mode !== "self-service") {
+      throw new RangeError("加油模式必須是人工加油或自助加油。");
+    }
+    if (!Number.isFinite(discount) || discount < 0) {
+      throw new RangeError("自助每公升優惠必須是 0 或正數。");
+    }
+
+    const effectivePrice = price - discount;
+    if (effectivePrice <= 0) {
+      throw new RangeError("自助有效單價必須大於 0 元。");
+    }
+    return effectivePrice;
   }
 
   function normalizeConfiguration(rawConfig) {
@@ -367,7 +390,7 @@
     const r = toNumber(config.rechargeRate);
     const d = toNumber(config.selfServiceDiscount);
     const B = A * (1 + r);
-    const U = P - d;
+    const U = calculateEffectiveUnitPrice(P, d, "self-service");
     const cardPointsPer30 = getCardPointsPer30(config.cardType);
     const ctbcPoints = Math.floor(A / 30) * cardPointsPer30;
     const ctbcValue = ctbcPoints * config.ctbcPointValue;
@@ -742,6 +765,48 @@
     }
   }
 
+  function loadSharedFuelState(storage) {
+    if (!storage || typeof storage.getItem !== "function") return null;
+    try {
+      const rawValue = storage.getItem(STORAGE_KEY);
+      if (!rawValue) return null;
+      const payload = JSON.parse(rawValue);
+      const hasOwn = (object, property) =>
+        object !== null &&
+        typeof object === "object" &&
+        Object.prototype.hasOwnProperty.call(object, property);
+      const isStoredNumber = (value) =>
+        (typeof value === "number" && Number.isFinite(value)) ||
+        (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value)));
+
+      if (
+        !payload ||
+        payload.version !== STORAGE_VERSION ||
+        !hasOwn(payload, "prices") ||
+        !hasOwn(payload.prices, "98") ||
+        !hasOwn(payload.prices, "95") ||
+        !hasOwn(payload.prices, "92") ||
+        !hasOwn(payload, "config") ||
+        !hasOwn(payload.config, "selfServiceDiscount")
+      ) {
+        return null;
+      }
+
+      if (
+        !isStoredNumber(payload.prices[98]) ||
+        !isStoredNumber(payload.prices[95]) ||
+        !isStoredNumber(payload.prices[92]) ||
+        !isStoredNumber(payload.config.selfServiceDiscount)
+      ) {
+        return null;
+      }
+
+      return loadPreferences(storage);
+    } catch (_error) {
+      return null;
+    }
+  }
+
   function clearPreferences(storage) {
     if (!storage || typeof storage.removeItem !== "function") return false;
     try {
@@ -754,6 +819,7 @@
 
   return Object.freeze({
     STORAGE_KEY,
+    THEME_STORAGE_KEY,
     ALMOST_TIE_THRESHOLD,
     CARD_TYPES,
     DEFAULT_PRICES,
@@ -762,6 +828,7 @@
     getDefaultState,
     toNumber,
     isFiniteNumber,
+    calculateEffectiveUnitPrice,
     normalizeConfiguration,
     validateConfiguration,
     validateFuelPrice,
@@ -774,6 +841,7 @@
     calculateAll,
     savePreferences,
     loadPreferences,
+    loadSharedFuelState,
     clearPreferences,
   });
 });

@@ -7,7 +7,7 @@
   }
 
   const grades = ["98", "95", "92"];
-  const themeStorageKey = "cpc-fuel-rewards-theme";
+  const themeStorageKey = calculator.THEME_STORAGE_KEY;
   const formatters = {
     money: new Intl.NumberFormat("zh-TW", {
       minimumFractionDigits: 2,
@@ -573,7 +573,7 @@
   });
 
   elements.form.addEventListener("change", (event) => {
-    if (event.target.matches("select")) calculateAndRender({ announce: false });
+    if (event.target.matches("input, select")) calculateAndRender({ announce: false });
   });
 
   elements.resetButton.addEventListener("click", () => {
@@ -614,6 +614,14 @@
   });
 
   elements.themeToggle.addEventListener("click", cycleTheme);
+
+  globalThis.addEventListener("pagehide", () => {
+    if (renderFrame !== null) {
+      globalThis.cancelAnimationFrame(renderFrame);
+      renderFrame = null;
+      calculateAndRender({ announce: false });
+    }
+  });
 
   const initialState = calculator.loadPreferences(storage) || calculator.getDefaultState();
   loadTheme();

@@ -333,6 +333,52 @@ test("localStorage 設定可儲存、讀取、合併缺省欄位與清除", () =
   assert.equal(calculator.loadPreferences(storage), null);
 });
 
+test("第二頁共用設定只接受完整油價與自助優惠，不會用預設值補猜", () => {
+  const storage = new MemoryStorage();
+  assert.equal(calculator.loadSharedFuelState(storage), null);
+
+  storage.setItem(
+    calculator.STORAGE_KEY,
+    JSON.stringify({ version: 1, prices: { 98: 36 }, config: { selfServiceDiscount: 0.8 } }),
+  );
+  assert.equal(calculator.loadSharedFuelState(storage), null);
+
+  const state = calculator.getDefaultState();
+  state.prices = { 98: 35.1, 95: 33.2, 92: 31.7 };
+  assert.equal(calculator.savePreferences(storage, state), true);
+  assert.deepEqual(calculator.loadSharedFuelState(storage), state);
+
+  const raw = JSON.parse(storage.getItem(calculator.STORAGE_KEY));
+  delete raw.config.selfServiceDiscount;
+  storage.setItem(calculator.STORAGE_KEY, JSON.stringify(raw));
+  assert.equal(calculator.loadSharedFuelState(storage), null);
+
+  for (const invalidDiscount of [null, true, false, "", "   "]) {
+    const invalidState = calculator.getDefaultState();
+    const payload = { version: 1, prices: invalidState.prices, config: invalidState.config };
+    payload.config.selfServiceDiscount = invalidDiscount;
+    storage.setItem(calculator.STORAGE_KEY, JSON.stringify(payload));
+    assert.equal(calculator.loadSharedFuelState(storage), null);
+  }
+
+  for (const invalidPrice of [null, true, false, "", "   "]) {
+    const invalidState = calculator.getDefaultState();
+    const payload = { version: 1, prices: invalidState.prices, config: invalidState.config };
+    payload.prices[98] = invalidPrice;
+    storage.setItem(calculator.STORAGE_KEY, JSON.stringify(payload));
+    assert.equal(calculator.loadSharedFuelState(storage), null);
+  }
+});
+
+test("人工與自助有效單價共用同一條 P−d 規則", () => {
+  assert.equal(calculator.calculateEffectiveUnitPrice(32, 0.8, "manual"), 32);
+  close(calculator.calculateEffectiveUnitPrice(32, 0.8, "self-service"), 31.2);
+  assert.throws(
+    () => calculator.calculateEffectiveUnitPrice(0.8, 0.8, "self-service"),
+    /必須大於 0/,
+  );
+});
+
 test("localStorage 損壞資料、舊版本、非法值或瀏覽器拒絕存取時安全回退", () => {
   const storage = new MemoryStorage();
   storage.setItem(calculator.STORAGE_KEY, "{broken json");
@@ -363,6 +409,7 @@ test("localStorage 損壞資料、舊版本、非法值或瀏覽器拒絕存取�
     },
   };
   assert.equal(calculator.loadPreferences(throwingStorage), null);
+  assert.equal(calculator.loadSharedFuelState(throwingStorage), null);
   assert.equal(calculator.savePreferences(throwingStorage, calculator.getDefaultState()), false);
   assert.equal(calculator.clearPreferences(throwingStorage), false);
 });

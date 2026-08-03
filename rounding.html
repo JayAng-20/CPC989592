@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#eaf5ff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0b1525" media="(prefers-color-scheme: dark)">
+    <link rel="icon" href="data:,">
+    <meta
+      name="description"
+      content="沿用加油回饋排名頁面的台灣中油油價，精確搜尋跳停後最近十個符合金額小數部分小於 0.5 的候選公升數。"
+    >
+    <title>跳停後金額試算｜台灣中油加油方式比較</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="calculator.js" defer></script>
+    <script src="rounding-calculator.js" defer></script>
+    <script src="rounding.js" defer></script>
+  </head>
+  <body class="rounding-page">
+    <a class="skip-link" href="#main-content">跳到主要內容</a>
+
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="index.html" aria-label="台灣中油加油方式比較首頁">
+          <span class="brand-mark" aria-hidden="true">算</span>
+          <span>
+            <strong>加油方式比較</strong>
+            <small>台灣中油・精確金額試算</small>
+          </span>
+        </a>
+        <nav class="page-nav" aria-label="主要頁面">
+          <a href="index.html">加油回饋排名</a>
+          <a href="rounding.html" aria-current="page">跳停後金額試算</a>
+        </nav>
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="切換深淺色模式">
+          <span class="theme-icon" aria-hidden="true">◐</span>
+          <span class="theme-label">自動</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="main-content" class="rounding-main">
+      <section class="shell rounding-intro" aria-labelledby="rounding-title">
+        <p class="section-kicker">精確金額規劃</p>
+        <h1 id="rounding-title">跳停後金額試算</h1>
+        <p>
+          沿用「加油回饋排名」頁面的油價，從下一個 0.01 L 起向上搜尋，找出距離最近的十個候選值。
+        </p>
+      </section>
+
+      <section
+        id="missing-price-state"
+        class="shell glass-card missing-price-card"
+        aria-labelledby="missing-price-heading"
+        hidden
+      >
+        <p class="section-kicker">需要油價資料</p>
+        <h2 id="missing-price-heading">尚未設定油價</h2>
+        <p>尚未設定油價，請先回到「加油回饋排名」頁面輸入 98、95、92 油價。</p>
+        <a class="button primary" href="index.html">回首頁設定油價</a>
+      </section>
+
+      <div id="rounding-app" hidden>
+        <div class="shell rounding-layout">
+          <form id="rounding-form" class="glass-card rounding-panel" novalidate>
+            <div class="rounding-panel-heading">
+              <p class="section-kicker">試算條件</p>
+              <h2>設定油品與跳停數</h2>
+            </div>
+
+            <fieldset class="rounding-fieldset">
+              <legend>選擇油品</legend>
+              <div class="rounding-choice-grid grade-choice-grid">
+                <label class="rounding-choice grade-98">
+                  <input type="radio" name="fuel-grade" value="98">
+                  <span class="rounding-choice-content">
+                    <strong>98</strong>
+                    <small>無鉛汽油</small>
+                  </span>
+                </label>
+                <label class="rounding-choice grade-95">
+                  <input type="radio" name="fuel-grade" value="95" checked>
+                  <span class="rounding-choice-content">
+                    <strong>95</strong>
+                    <small>無鉛汽油</small>
+                  </span>
+                </label>
+                <label class="rounding-choice grade-92">
+                  <input type="radio" name="fuel-grade" value="92">
+                  <span class="rounding-choice-content">
+                    <strong>92</strong>
+                    <small>無鉛汽油</small>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="rounding-fieldset">
+              <legend>加油模式</legend>
+              <div class="rounding-choice-grid mode-choice-grid">
+                <label class="rounding-choice">
+                  <input type="radio" name="fuel-mode" value="manual" checked>
+                  <span class="rounding-choice-content mode-choice-content">
+                    <strong>人工加油</strong>
+                  </span>
+                </label>
+                <label class="rounding-choice">
+                  <input type="radio" name="fuel-mode" value="self-service">
+                  <span class="rounding-choice-content mode-choice-content">
+                    <strong>自助加油</strong>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div
+              id="rounding-price-summary"
+              class="rounding-price-summary"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            ></div>
+
+            <div class="rounding-volume-field">
+              <label for="stop-volume">目前跳停公升數</label>
+              <div class="rounding-volume-input">
+                <input
+                  id="stop-volume"
+                  name="stop-volume"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="37.42"
+                  aria-describedby="stop-volume-hint stop-volume-error"
+                >
+                <span aria-hidden="true">L</span>
+              </div>
+              <p id="stop-volume-hint" class="field-hint">最多輸入小數點後兩位；結果會從下一個 0.01 L 開始。</p>
+              <p id="stop-volume-error" class="field-error" role="alert"></p>
+            </div>
+
+            <button class="button primary rounding-submit" type="submit">開始試算</button>
+          </form>
+
+          <section class="rounding-results-section" aria-labelledby="rounding-results-heading">
+            <div class="rounding-results-heading">
+              <div>
+                <p class="section-kicker">最近的候選值</p>
+                <h2 id="rounding-results-heading">前十項試算結果</h2>
+              </div>
+              <span>有效範圍 NT$20～NT$3,000</span>
+            </div>
+            <p
+              id="rounding-result-status"
+              class="rounding-result-status sr-only"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            ></p>
+            <div id="rounding-empty-state" class="rounding-empty-state">
+              <p>請選擇油品與加油模式，並輸入目前跳停公升數。</p>
+            </div>
+            <p id="rounding-result-note" class="rounding-result-note" hidden></p>
+            <ol id="rounding-results" class="rounding-result-list"></ol>
+          </section>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
