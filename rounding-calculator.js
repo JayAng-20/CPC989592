@@ -18,7 +18,7 @@
   });
   const MIN_AMOUNT = 20n;
   const MAX_AMOUNT = 3000n;
-  const DEFAULT_RESULT_LIMIT = 10;
+  const DEFAULT_RESULT_LIMIT = 5;
   const MAX_DECIMAL_SCALE = 24;
 
   function powerOfTen(scale) {
@@ -207,9 +207,7 @@
     const rawAmountScale = unitPrice.scale + 2;
     const denominator = powerOfTen(rawAmountScale);
     const fractionUnits = rawAmountUnits % denominator;
-    const qualifies =
-      fractionUnits * 10n >= denominator * 3n &&
-      fractionUnits * 2n < denominator;
+    const qualifies = fractionUnits * 5n === denominator * 2n;
     const roundedAmount = (rawAmountUnits * 2n + denominator) / (2n * denominator);
 
     return {
@@ -235,9 +233,7 @@
     const denominator = powerOfTen(parsed.scale);
     const fractionUnits = parsed.units % denominator;
     return {
-      qualifies:
-        fractionUnits * 10n >= denominator * 3n &&
-        fractionUnits * 2n < denominator,
+      qualifies: fractionUnits * 5n === denominator * 2n,
       roundedAmount: (parsed.units * 2n + denominator) / (2n * denominator),
     };
   }
@@ -306,17 +302,19 @@
           continue;
         }
 
-        // Skip only ranges that cannot satisfy 0.3 <= fraction < 0.5. When the
-        // fraction is below 0.3, jump to this dollar's 0.3 boundary; at 0.5 or
-        // above, jump to the next dollar's 0.3 boundary. This remains equivalent
+        // The only qualifying point in each whole-dollar interval is exactly
+        // .400. Jump to this dollar's .400 boundary when still below it, or to
+        // the next dollar's .400 boundary after passing it. This is equivalent
         // to checking every 0.01 L value and guarantees progress for tiny prices.
         const wholeAmount = amount.rawAmountUnits / amount.denominator;
-        const lowerFractionBoundary = (amount.denominator * 3n) / 10n;
-        const candidateWindowRawUnits =
-          amount.fractionUnits * 10n < amount.denominator * 3n
-            ? wholeAmount * amount.denominator + lowerFractionBoundary
-            : (wholeAmount + 1n) * amount.denominator + lowerFractionBoundary;
-        const nextTarget = ceilDivide(candidateWindowRawUnits, unitPrice.units);
+        const exactFractionBoundary = (amount.denominator * 2n) / 5n;
+        const boundaryWholeAmount =
+          amount.fractionUnits * 5n < amount.denominator * 2n
+            ? wholeAmount
+            : wholeAmount + 1n;
+        const candidateBoundaryRawUnits =
+          boundaryWholeAmount * amount.denominator + exactFractionBoundary;
+        const nextTarget = ceilDivide(candidateBoundaryRawUnits, unitPrice.units);
         target = nextTarget > target ? nextTarget : target + 1n;
       }
     }

@@ -29,18 +29,20 @@ test("T1：搜尋只往上，不包含跳停值本身或更低公升數", () => 
   assert.equal(result.candidates.some((candidate) => candidate.targetVolume === "10.00"), false);
 });
 
-test("T2：一般條件回傳十筆，接近上限可不足十筆，且永不超過十筆", () => {
-  assert.equal(search().candidates.length, 10);
+test("T2：一般條件回傳五筆，接近上限可不足五筆，且永不超過五筆", () => {
+  assert.equal(search().candidates.length, 5);
 
-  const nearLimit = search({ stopVolume: "93.70" });
+  const nearLimit = search({ stopVolume: "93.40" });
   assert.deepEqual(
     nearLimit.candidates.map((candidate) => candidate.targetVolume),
-    ["93.73"],
+    ["93.45", "93.70"],
   );
-  assert.equal(nearLimit.candidates.length, 1);
+  assert.equal(nearLimit.candidates.length, 2);
   assert.equal(nearLimit.amountLimitReached, true);
-  assert.ok(search({ limit: 4 }).candidates.length <= 4);
-  assert.ok(search().candidates.length <= 10);
+  assert.equal(search({ limit: 4 }).candidates.length, 4);
+  assert.ok(search().candidates.length <= 5);
+  assert.equal(rounding.validateSearchInput({ ...baseInput, limit: 6 }).valid, false);
+  assert.throws(() => search({ limit: 6 }), RangeError);
 });
 
 test("T3：結果依目標公升與增加量嚴格遞增", () => {
@@ -57,14 +59,18 @@ test("T3：結果依目標公升與增加量嚴格遞增", () => {
   }
 });
 
-test("T4：只納入 .300（含）至 .500（不含）的精確小數區間", () => {
+test("T4：只納入小數部分精確等於 .400 的金額", () => {
   const cases = [
-    ["320.299", false, 320n],
-    ["320.300", true, 320n],
-    ["320.301", true, 320n],
-    ["320.499", true, 320n],
+    ["320.399", false, 320n],
+    ["320.4", true, 320n],
+    ["320.40", true, 320n],
+    ["320.400", true, 320n],
+    ["320.4000", true, 320n],
+    ["320.401", false, 320n],
+    ["320.410", false, 320n],
+    ["320.490", false, 320n],
+    ["320.499", false, 320n],
     ["320.500", false, 321n],
-    ["320.501", false, 321n],
     ["320.000", false, 320n],
   ];
   for (const [amount, qualifies, roundedAmount] of cases) {
@@ -75,7 +81,8 @@ test("T4：只納入 .300（含）至 .500（不含）的精確小數區間", ()
   }
 
   const actualSearch = search({ prices: { ...prices, 95: 10 } });
-  assert.ok(actualSearch.candidates.some((candidate) => candidate.rawAmount === "100.300"));
+  assert.ok(actualSearch.candidates.some((candidate) => candidate.rawAmount === "100.400"));
+  assert.equal(actualSearch.candidates.some((candidate) => candidate.rawAmount === "100.300"), false);
   assert.equal(actualSearch.candidates.some((candidate) => candidate.rawAmount === "100.500"), false);
   for (const candidate of actualSearch.candidates) {
     assert.equal(rounding.classifyUnroundedAmount(candidate.rawAmount).qualifies, true);
@@ -84,9 +91,9 @@ test("T4：只納入 .300（含）至 .500（不含）的精確小數區間", ()
 
 test("T5：人工模式直接使用人工油價乘以候選公升數", () => {
   const first = search().candidates[0];
-  assert.equal(first.targetVolume, "10.01");
-  assert.equal(first.rawAmount, "320.320");
-  assert.equal(first.roundedAmount, "320");
+  assert.equal(first.targetVolume, "10.20");
+  assert.equal(first.rawAmount, "326.400");
+  assert.equal(first.roundedAmount, "326");
   assert.equal(search().effectiveUnitPrice, "32.0");
 });
 
@@ -95,9 +102,9 @@ test("T6：自助模式直接以精確自助有效單價乘以公升數，沒有
   assert.equal(result.manualUnitPrice, "32.0");
   assert.equal(result.selfServiceDiscount, "0.8");
   assert.equal(result.effectiveUnitPrice, "31.2");
-  assert.equal(result.candidates[0].targetVolume, "10.01");
-  assert.equal(result.candidates[0].rawAmount, "312.312");
-  assert.equal(result.candidates[0].roundedAmount, "312");
+  assert.equal(result.candidates[0].targetVolume, "10.75");
+  assert.equal(result.candidates[0].rawAmount, "335.400");
+  assert.equal(result.candidates[0].roundedAmount, "335");
 
   const exactMultiDecimal = search({
     prices: { ...prices, 95: 32.05 },
@@ -115,9 +122,9 @@ test("T6：自助模式直接以精確自助有效單價乘以公升數，沒有
 
 test("T7：98、95、92 切換後使用各自正確牌價與自助價", () => {
   const expected = {
-    98: ["34.0", "340.340", "33.2"],
-    95: ["32.0", "320.320", "31.2"],
-    92: ["30.5", "305.305", "29.7"],
+    98: ["34.0", "343.400", "33.2"],
+    95: ["32.0", "326.400", "31.2"],
+    92: ["30.5", "329.400", "29.7"],
   };
 
   for (const grade of rounding.GRADES) {
@@ -126,23 +133,59 @@ test("T7：98、95、92 切換後使用各自正確牌價與自助價", () => {
     assert.equal(manual.effectiveUnitPrice, expected[grade][0]);
     assert.equal(manual.candidates[0].rawAmount, expected[grade][1]);
     assert.equal(selfService.effectiveUnitPrice, expected[grade][2]);
+    assert.ok(manual.candidates.every((candidate) => rounding.classifyUnroundedAmount(candidate.rawAmount).qualifies));
+    assert.ok(selfService.candidates.every((candidate) => rounding.classifyUnroundedAmount(candidate.rawAmount).qualifies));
   }
 });
 
-test("T8：32.0 元與 10.00 L 固定案例精確回傳指定前十筆", () => {
+test("T8：32.0 元與 10.00 L 固定案例精確回傳指定前五筆", () => {
   const result = search();
   assert.deepEqual(
-    result.candidates.map((candidate) => candidate.targetVolume),
-    ["10.01", "10.14", "10.17", "10.20", "10.23", "10.26", "10.39", "10.42", "10.45", "10.48"],
+    result.candidates,
+    [
+      {
+        rank: 1,
+        targetVolume: "10.20",
+        additionalVolume: "0.20",
+        additionalMilliliters: "200",
+        rawAmount: "326.400",
+        roundedAmount: "326",
+      },
+      {
+        rank: 2,
+        targetVolume: "10.45",
+        additionalVolume: "0.45",
+        additionalMilliliters: "450",
+        rawAmount: "334.400",
+        roundedAmount: "334",
+      },
+      {
+        rank: 3,
+        targetVolume: "10.70",
+        additionalVolume: "0.70",
+        additionalMilliliters: "700",
+        rawAmount: "342.400",
+        roundedAmount: "342",
+      },
+      {
+        rank: 4,
+        targetVolume: "10.95",
+        additionalVolume: "0.95",
+        additionalMilliliters: "950",
+        rawAmount: "350.400",
+        roundedAmount: "350",
+      },
+      {
+        rank: 5,
+        targetVolume: "11.20",
+        additionalVolume: "1.20",
+        additionalMilliliters: "1200",
+        rawAmount: "358.400",
+        roundedAmount: "358",
+      },
+    ],
   );
-  assert.deepEqual(result.candidates[0], {
-    rank: 1,
-    targetVolume: "10.01",
-    additionalVolume: "0.01",
-    additionalMilliliters: "10",
-    rawAmount: "320.320",
-    roundedAmount: "320",
-  });
+  assert.equal(result.candidates.some((candidate) => candidate.targetVolume === "11.45"), false);
 });
 
 test("T9：只納入 NT$20～NT$3,000，並在上限停止", () => {
@@ -237,10 +280,10 @@ test("極小自助有效單價會精確跳過不合格區間，不會在 NT$3,00
 
   assert.equal(result.resultLimitReached, true);
   assert.equal(result.reason, "result-limit");
-  assert.equal(result.candidates.length, 10);
-  assert.equal(result.candidates[0].targetVolume, "213000000.00");
-  assert.equal(result.candidates[0].rawAmount, "21.300000000");
-  assert.equal(result.candidates[0].additionalVolume, "8000000.00");
+  assert.equal(result.candidates.length, 5);
+  assert.equal(result.candidates[0].targetVolume, "214000000.00");
+  assert.equal(result.candidates[0].rawAmount, "21.400000000");
+  assert.equal(result.candidates[0].additionalVolume, "9000000.00");
 });
 
 test("第一頁與第二頁的 P−d 共用規則維持一致", () => {

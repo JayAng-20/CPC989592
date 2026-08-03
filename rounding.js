@@ -173,14 +173,14 @@
       result.amountLimitReached
     ) {
       elements.resultNote.hidden = false;
-      elements.resultNote.textContent = `已到達 NT$3,000 金額上限，目前找到 ${result.candidates.length} 項符合結果。`;
+      elements.resultNote.textContent = `已到達 NT$3,000 金額上限，目前找到 ${result.candidates.length} 項未進位金額小數部分精確為 0.400 的結果。`;
     } else {
       elements.resultNote.hidden = true;
       elements.resultNote.textContent = "";
     }
 
     const first = result.candidates[0];
-    elements.resultStatus.textContent = `已找到 ${result.candidates.length} 項。最近一項為 ${first.targetVolume} L，四捨五入後 ${formatMoney(first.roundedAmount)}。`;
+    elements.resultStatus.textContent = `已找到 ${result.candidates.length} 項未進位金額小數部分精確為 0.400 的結果。最近一項為 ${first.targetVolume} L，四捨五入後 ${formatMoney(first.roundedAmount)}。`;
   }
 
   function calculateAndRender({ announce = false } = {}) {
@@ -198,7 +198,7 @@
     if (rawVolume.trim() === "") {
       const message = volumeTouched || announce ? "請輸入目前跳停公升數。" : "";
       setVolumeError(message);
-      clearResults("請選擇油品與加油模式，並輸入目前跳停公升數。");
+      clearResults("請選擇油品與加油模式，並輸入目前跳停公升數；結果最多顯示小數部分精確為 0.400 的最近五項。");
       elements.resultStatus.textContent = announce
         ? "請先輸入目前跳停公升數。"
         : "尚未輸入目前跳停公升數。";
@@ -210,8 +210,8 @@
       setVolumeError("");
 
       if (result.candidates.length === 0) {
-        clearResults("目前條件在 NT$20～NT$3,000 範圍內找不到符合的候選值。");
-        elements.resultStatus.textContent = "目前金額範圍內找不到符合的候選值。";
+        clearResults("目前條件在 NT$20～NT$3,000 範圍內找不到未進位金額小數部分精確為 0.400 的候選值。");
+        elements.resultStatus.textContent = "目前金額範圍內找不到未進位金額小數部分精確為 0.400 的候選值。";
         return;
       }
 

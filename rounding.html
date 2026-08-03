@@ -9,7 +9,7 @@
     <link rel="icon" href="data:,">
     <meta
       name="description"
-      content="沿用加油回饋排名頁面的台灣中油油價，精確搜尋未進位金額小數部分介於 0.3（含）至 0.5（不含）的最近十個候選公升數。"
+      content="沿用加油回饋排名頁面的台灣中油油價，搜尋未進位金額小數部分精確為 0.400、距離目前跳停公升數最近的五個候選公升數。"
     >
     <title>跳停後金額試算｜台灣中油加油方式比較</title>
     <link rel="stylesheet" href="styles.css">
@@ -48,7 +48,7 @@
         <p class="section-kicker">精確金額規劃</p>
         <h1 id="rounding-title">跳停後金額試算</h1>
         <p>
-          沿用「加油回饋排名」頁面的油價，從下一個 0.01 L 起向上搜尋，找出未進位金額小數部分介於 0.3（含）至 0.5（不含）的最近十個候選公升數。
+          沿用「加油回饋排名」頁面的油價，從下一個 0.01 L 起向上搜尋，最多找出五個未進位金額小數部分精確為 0.400 的最近候選公升數。
         </p>
       </section>
 
@@ -152,7 +152,7 @@
             <div class="rounding-results-heading">
               <div>
                 <p class="section-kicker">最近的候選值</p>
-                <h2 id="rounding-results-heading">前十項試算結果</h2>
+                <h2 id="rounding-results-heading">前五項試算結果</h2>
               </div>
               <span>有效範圍 NT$20～NT$3,000</span>
             </div>
@@ -164,7 +164,7 @@
               aria-atomic="true"
             ></p>
             <div id="rounding-empty-state" class="rounding-empty-state">
-              <p>請選擇油品與加油模式，並輸入目前跳停公升數。</p>
+              <p>請選擇油品與加油模式，並輸入目前跳停公升數；結果最多顯示小數部分精確為 0.400 的最近五項。</p>
             </div>
             <p id="rounding-result-note" class="rounding-result-note" hidden></p>
             <ol id="rounding-results" class="rounding-result-list"></ol>
