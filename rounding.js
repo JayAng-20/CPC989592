@@ -139,12 +139,16 @@
     };
   }
 
+  function formatCategorySummary(result) {
+    return `小數部分 0.3（含）至 0.4（不含）共 ${result.categoryCounts.range} 項；小數部分精確等於 0.4 共 ${result.categoryCounts.exactPointFour} 項`;
+  }
+
   function renderResults(result) {
     elements.emptyState.hidden = true;
     elements.results.innerHTML = result.candidates
       .map(
         (candidate) => `
-          <li class="rounding-result-card${candidate.rank === 1 ? " is-first" : ""}">
+          <li class="rounding-result-card${candidate.rank === 1 ? " is-first" : ""}" data-category="${candidate.category}">
             <header>
               <span>第 ${candidate.rank} 項</span>
               <strong>${candidate.targetVolume} L</strong>
@@ -154,7 +158,11 @@
                 <dt>還需增加</dt>
                 <dd>${candidate.additionalVolume} L <small>（${integerFormatter.format(BigInt(candidate.additionalMilliliters))} mL）</small></dd>
               </div>
-              <div>
+              <div class="result-raw-amount${
+                roundingCalculator.isExactPointFourCandidate(candidate)
+                  ? " result-raw-amount--highlight"
+                  : ""
+              }">
                 <dt>未進位金額</dt>
                 <dd>${formatMoney(candidate.rawAmount)}</dd>
               </div>
@@ -169,18 +177,18 @@
       .join("");
 
     if (
-      result.candidates.length < roundingCalculator.DEFAULT_RESULT_LIMIT &&
+      !result.resultLimitReached &&
       result.amountLimitReached
     ) {
       elements.resultNote.hidden = false;
-      elements.resultNote.textContent = `已到達 NT$3,000 金額上限，目前找到 ${result.candidates.length} 項未進位金額小數部分精確為 0.400 的結果。`;
+      elements.resultNote.textContent = `已到達 NT$3,000 金額上限，目前找到 ${result.candidates.length} 項結果：${formatCategorySummary(result)}。`;
     } else {
       elements.resultNote.hidden = true;
       elements.resultNote.textContent = "";
     }
 
     const first = result.candidates[0];
-    elements.resultStatus.textContent = `已找到 ${result.candidates.length} 項未進位金額小數部分精確為 0.400 的結果。最近一項為 ${first.targetVolume} L，四捨五入後 ${formatMoney(first.roundedAmount)}。`;
+    elements.resultStatus.textContent = `已找到 ${result.candidates.length} 項結果：${formatCategorySummary(result)}。最近一項為 ${first.targetVolume} L，四捨五入後 ${formatMoney(first.roundedAmount)}。`;
   }
 
   function calculateAndRender({ announce = false } = {}) {
@@ -198,7 +206,7 @@
     if (rawVolume.trim() === "") {
       const message = volumeTouched || announce ? "請輸入目前跳停公升數。" : "";
       setVolumeError(message);
-      clearResults("請選擇油品與加油模式，並輸入目前跳停公升數；結果最多顯示小數部分精確為 0.400 的最近五項。");
+      clearResults("請選擇油品與加油模式，並輸入目前跳停公升數；系統會分別尋找兩類各五項，合併後依增加公升數排序。");
       elements.resultStatus.textContent = announce
         ? "請先輸入目前跳停公升數。"
         : "尚未輸入目前跳停公升數。";
@@ -210,8 +218,8 @@
       setVolumeError("");
 
       if (result.candidates.length === 0) {
-        clearResults("目前條件在 NT$20～NT$3,000 範圍內找不到未進位金額小數部分精確為 0.400 的候選值。");
-        elements.resultStatus.textContent = "目前金額範圍內找不到未進位金額小數部分精確為 0.400 的候選值。";
+        clearResults("目前條件在 NT$20～NT$3,000 範圍內找不到小數部分介於 0.3（含）至 0.4（不含），或精確等於 0.4 的候選值。");
+        elements.resultStatus.textContent = "目前金額範圍內找不到兩種指定小數條件的候選值。";
         return;
       }
 

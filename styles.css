@@ -3114,6 +3114,15 @@ body {
   font-weight: 760;
 }
 
+.rounding-result-card .result-raw-amount--highlight dt,
+.rounding-result-card .result-raw-amount--highlight dd {
+  color: #b42318;
+}
+
+.rounding-result-card .result-raw-amount--highlight dd {
+  font-weight: 780;
+}
+
 .rounding-result-card.is-first {
   grid-column: 1 / -1;
   border-color: rgba(144, 113, 48, 0.28);
@@ -3225,6 +3234,11 @@ body {
   background: linear-gradient(120deg, rgba(25, 43, 64, 0.98), rgba(48, 43, 34, 0.9));
 }
 
+:root[data-theme="dark"] .rounding-result-card .result-raw-amount--highlight dt,
+:root[data-theme="dark"] .rounding-result-card .result-raw-amount--highlight dd {
+  color: #ff9c95;
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .page-nav {
     border-color: rgba(174, 199, 227, 0.13);
@@ -3277,6 +3291,11 @@ body {
   :root:not([data-theme="light"]) .rounding-result-card.is-first {
     border-color: rgba(226, 187, 111, 0.28);
     background: linear-gradient(120deg, rgba(25, 43, 64, 0.98), rgba(48, 43, 34, 0.9));
+  }
+
+  :root:not([data-theme="light"]) .rounding-result-card .result-raw-amount--highlight dt,
+  :root:not([data-theme="light"]) .rounding-result-card .result-raw-amount--highlight dd {
+    color: #ff9c95;
   }
 }
 

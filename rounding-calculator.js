@@ -16,9 +16,14 @@
     MANUAL: "manual",
     SELF_SERVICE: "self-service",
   });
+  const CATEGORIES = Object.freeze({
+    RANGE: "range",
+    EXACT_POINT_FOUR: "exact-point-four",
+  });
   const MIN_AMOUNT = 20n;
   const MAX_AMOUNT = 3000n;
-  const DEFAULT_RESULT_LIMIT = 5;
+  const CATEGORY_RESULT_LIMIT = 5;
+  const DEFAULT_RESULT_LIMIT = CATEGORY_RESULT_LIMIT * 2;
   const MAX_DECIMAL_SCALE = 24;
 
   function powerOfTen(scale) {
@@ -207,7 +212,7 @@
     const rawAmountScale = unitPrice.scale + 2;
     const denominator = powerOfTen(rawAmountScale);
     const fractionUnits = rawAmountUnits % denominator;
-    const qualifies = fractionUnits * 5n === denominator * 2n;
+    const category = classifyFraction(fractionUnits, denominator);
     const roundedAmount = (rawAmountUnits * 2n + denominator) / (2n * denominator);
 
     return {
@@ -215,13 +220,26 @@
       rawAmountScale,
       denominator,
       fractionUnits,
-      qualifies,
+      category,
+      qualifies: category !== null,
       roundedAmount,
       rawAmount: formatDecimal(
         { units: rawAmountUnits, scale: rawAmountScale },
         Math.max(3, rawAmountScale),
       ),
     };
+  }
+
+  function classifyFraction(fractionUnits, denominator) {
+    const isRangeCandidate =
+      fractionUnits * 10n >= denominator * 3n &&
+      fractionUnits * 5n < denominator * 2n;
+    if (isRangeCandidate) return CATEGORIES.RANGE;
+
+    const isExactPointFourCandidate = fractionUnits * 5n === denominator * 2n;
+    if (isExactPointFourCandidate) return CATEGORIES.EXACT_POINT_FOUR;
+
+    return null;
   }
 
   function classifyUnroundedAmount(rawAmount) {
@@ -232,10 +250,18 @@
     if (parsed.units < 0n) throw new RangeError("未進位金額不可為負數。");
     const denominator = powerOfTen(parsed.scale);
     const fractionUnits = parsed.units % denominator;
+    const category = classifyFraction(fractionUnits, denominator);
     return {
-      qualifies: fractionUnits * 5n === denominator * 2n,
+      category,
+      qualifies: category !== null,
+      isRangeCandidate: category === CATEGORIES.RANGE,
+      isExactPointFourCandidate: category === CATEGORIES.EXACT_POINT_FOUR,
       roundedAmount: (parsed.units * 2n + denominator) / (2n * denominator),
     };
+  }
+
+  function isExactPointFourCandidate(candidate) {
+    return candidate?.category === CATEGORIES.EXACT_POINT_FOUR;
   }
 
   function ceilDivide(dividend, divisor) {
@@ -253,11 +279,15 @@
       }
       const stopHundredths = parseStopVolume(input.stopVolume);
       const unitPrices = resolveEffectiveUnitPrice(input);
-      const limit = input.limit === undefined ? DEFAULT_RESULT_LIMIT : Number(input.limit);
-      if (!Number.isInteger(limit) || limit < 1 || limit > DEFAULT_RESULT_LIMIT) {
-        throw new RangeError(`結果數量必須是 1 至 ${DEFAULT_RESULT_LIMIT} 的整數。`);
+      const requestedCategoryLimit = input.categoryLimit ?? input.limit;
+      const categoryLimit =
+        requestedCategoryLimit === undefined
+          ? CATEGORY_RESULT_LIMIT
+          : Number(requestedCategoryLimit);
+      if (!Number.isInteger(categoryLimit) || categoryLimit < 1 || categoryLimit > CATEGORY_RESULT_LIMIT) {
+        throw new RangeError(`每組結果數量必須是 1 至 ${CATEGORY_RESULT_LIMIT} 的整數。`);
       }
-      return { valid: true, error: "", stopHundredths, unitPrices, limit };
+      return { valid: true, error: "", stopHundredths, unitPrices, categoryLimit };
     } catch (error) {
       return {
         valid: false,
@@ -270,7 +300,7 @@
     const validation = validateSearchInput(input);
     if (!validation.valid) throw new RangeError(validation.error);
 
-    const { stopHundredths, unitPrices, limit } = validation;
+    const { stopHundredths, unitPrices, categoryLimit } = validation;
     const unitPrice = unitPrices.effective;
     const denominator = powerOfTen(unitPrice.scale + 2);
     const minimumRawUnits = MIN_AMOUNT * denominator;
@@ -280,46 +310,85 @@
     const firstInRange = ceilDivide(minimumRawUnits, unitPrice.units);
     const startHundredths = requestedStart > firstInRange ? requestedStart : firstInRange;
     const maximumHundredths = maximumRawUnits / unitPrice.units;
-    const candidates = [];
+    const rangeCandidates = [];
+    const exactPointFourCandidates = [];
     let searchedCount = 0;
 
     if (stopRawUnits <= maximumRawUnits && startHundredths <= maximumHundredths) {
       let target = startHundredths;
-      while (target <= maximumHundredths && candidates.length < limit) {
+      while (
+        target <= maximumHundredths &&
+        (rangeCandidates.length < categoryLimit ||
+          exactPointFourCandidates.length < categoryLimit)
+      ) {
         searchedCount += 1;
         const amount = analyzeAmount(unitPrice, target);
-        if (amount.qualifies) {
+        const needsRangeCandidates = rangeCandidates.length < categoryLimit;
+        const needsExactPointFourCandidates =
+          exactPointFourCandidates.length < categoryLimit;
+        const acceptsCategory =
+          (amount.category === CATEGORIES.RANGE && needsRangeCandidates) ||
+          (amount.category === CATEGORIES.EXACT_POINT_FOUR &&
+            needsExactPointFourCandidates);
+
+        if (acceptsCategory) {
           const additionalHundredths = target - stopHundredths;
-          candidates.push({
-            rank: candidates.length + 1,
+          const candidate = {
+            category: amount.category,
+            targetHundredths: target,
+            additionalHundredths,
             targetVolume: formatVolume(target),
             additionalVolume: formatVolume(additionalHundredths),
             additionalMilliliters: (additionalHundredths * 10n).toString(),
             rawAmount: amount.rawAmount,
             roundedAmount: amount.roundedAmount.toString(),
-          });
+          };
+          if (amount.category === CATEGORIES.RANGE) {
+            rangeCandidates.push(candidate);
+          } else {
+            exactPointFourCandidates.push(candidate);
+          }
           target += 1n;
           continue;
         }
 
-        // The only qualifying point in each whole-dollar interval is exactly
-        // .400. Jump to this dollar's .400 boundary when still below it, or to
-        // the next dollar's .400 boundary after passing it. This is equivalent
-        // to checking every 0.01 L value and guarantees progress for tiny prices.
+        // When range candidates are still needed, the next possible window
+        // starts at .300. Once that group is full, the next useful point is the
+        // exact .400 boundary. Jumping between these boundaries remains
+        // equivalent to checking every 0.01 L value and guarantees progress.
         const wholeAmount = amount.rawAmountUnits / amount.denominator;
-        const exactFractionBoundary = (amount.denominator * 2n) / 5n;
+        const boundaryFraction = needsRangeCandidates
+          ? (amount.denominator * 3n) / 10n
+          : (amount.denominator * 2n) / 5n;
         const boundaryWholeAmount =
-          amount.fractionUnits * 5n < amount.denominator * 2n
+          amount.fractionUnits < boundaryFraction
             ? wholeAmount
             : wholeAmount + 1n;
         const candidateBoundaryRawUnits =
-          boundaryWholeAmount * amount.denominator + exactFractionBoundary;
+          boundaryWholeAmount * amount.denominator + boundaryFraction;
         const nextTarget = ceilDivide(candidateBoundaryRawUnits, unitPrice.units);
         target = nextTarget > target ? nextTarget : target + 1n;
       }
     }
 
-    const resultLimitReached = candidates.length === limit;
+    const combinedCandidates = [...rangeCandidates, ...exactPointFourCandidates]
+      .sort((left, right) => {
+        if (left.additionalHundredths < right.additionalHundredths) return -1;
+        if (left.additionalHundredths > right.additionalHundredths) return 1;
+        return 0;
+      })
+      .map((candidate, index) => {
+        const { targetHundredths, additionalHundredths, ...displayCandidate } = candidate;
+        return {
+          rank: index + 1,
+          ...displayCandidate,
+          targetVolumeHundredths: targetHundredths.toString(),
+          additionalVolumeHundredths: additionalHundredths.toString(),
+        };
+      });
+    const resultLimitReached =
+      rangeCandidates.length === categoryLimit &&
+      exactPointFourCandidates.length === categoryLimit;
     const amountLimitReached = !resultLimitReached;
     const reason =
       stopRawUnits > maximumRawUnits
@@ -335,7 +404,12 @@
       selfServiceDiscount: formatDecimal(unitPrices.discount, 1),
       effectiveUnitPrice: formatDecimal(unitPrices.effective, 1),
       stopVolume: formatVolume(stopHundredths),
-      candidates,
+      candidates: combinedCandidates,
+      categoryCounts: {
+        range: rangeCandidates.length,
+        exactPointFour: exactPointFourCandidates.length,
+      },
+      categoryLimit,
       resultLimitReached,
       amountLimitReached,
       reason,
@@ -348,14 +422,17 @@
   return Object.freeze({
     GRADES,
     MODES,
+    CATEGORIES,
     MIN_AMOUNT,
     MAX_AMOUNT,
+    CATEGORY_RESULT_LIMIT,
     DEFAULT_RESULT_LIMIT,
     parseDecimal,
     parseStopVolume,
     resolveEffectiveUnitPrice,
     analyzeAmount,
     classifyUnroundedAmount,
+    isExactPointFourCandidate,
     validateSearchInput,
     findCandidates,
   });
