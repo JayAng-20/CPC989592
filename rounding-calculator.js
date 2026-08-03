@@ -207,7 +207,9 @@
     const rawAmountScale = unitPrice.scale + 2;
     const denominator = powerOfTen(rawAmountScale);
     const fractionUnits = rawAmountUnits % denominator;
-    const qualifies = fractionUnits * 2n < denominator;
+    const qualifies =
+      fractionUnits * 10n >= denominator * 3n &&
+      fractionUnits * 2n < denominator;
     const roundedAmount = (rawAmountUnits * 2n + denominator) / (2n * denominator);
 
     return {
@@ -233,7 +235,9 @@
     const denominator = powerOfTen(parsed.scale);
     const fractionUnits = parsed.units % denominator;
     return {
-      qualifies: fractionUnits * 2n < denominator,
+      qualifies:
+        fractionUnits * 10n >= denominator * 3n &&
+        fractionUnits * 2n < denominator,
       roundedAmount: (parsed.units * 2n + denominator) / (2n * denominator),
     };
   }
@@ -302,12 +306,17 @@
           continue;
         }
 
-        // The remainder can only increase until the next whole-dollar boundary.
-        // Jumping straight there is equivalent to testing every 0.01 L value, while
-        // still guaranteeing progress for extremely small effective unit prices.
+        // Skip only ranges that cannot satisfy 0.3 <= fraction < 0.5. When the
+        // fraction is below 0.3, jump to this dollar's 0.3 boundary; at 0.5 or
+        // above, jump to the next dollar's 0.3 boundary. This remains equivalent
+        // to checking every 0.01 L value and guarantees progress for tiny prices.
         const wholeAmount = amount.rawAmountUnits / amount.denominator;
-        const nextWholeRawUnits = (wholeAmount + 1n) * amount.denominator;
-        const nextTarget = ceilDivide(nextWholeRawUnits, unitPrice.units);
+        const lowerFractionBoundary = (amount.denominator * 3n) / 10n;
+        const candidateWindowRawUnits =
+          amount.fractionUnits * 10n < amount.denominator * 3n
+            ? wholeAmount * amount.denominator + lowerFractionBoundary
+            : (wholeAmount + 1n) * amount.denominator + lowerFractionBoundary;
+        const nextTarget = ceilDivide(candidateWindowRawUnits, unitPrice.units);
         target = nextTarget > target ? nextTarget : target + 1n;
       }
     }

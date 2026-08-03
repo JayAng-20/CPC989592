@@ -35,9 +35,9 @@ test("T2：一般條件回傳十筆，接近上限可不足十筆，且永不超
   const nearLimit = search({ stopVolume: "93.70" });
   assert.deepEqual(
     nearLimit.candidates.map((candidate) => candidate.targetVolume),
-    ["93.72", "93.73", "93.75"],
+    ["93.73"],
   );
-  assert.equal(nearLimit.candidates.length, 3);
+  assert.equal(nearLimit.candidates.length, 1);
   assert.equal(nearLimit.amountLimitReached, true);
   assert.ok(search({ limit: 4 }).candidates.length <= 4);
   assert.ok(search().candidates.length <= 10);
@@ -57,12 +57,15 @@ test("T3：結果依目標公升與增加量嚴格遞增", () => {
   }
 });
 
-test("T4：.499 與 .000 符合，.500 與 .501 不符合", () => {
+test("T4：只納入 .300（含）至 .500（不含）的精確小數區間", () => {
   const cases = [
+    ["320.299", false, 320n],
+    ["320.300", true, 320n],
+    ["320.301", true, 320n],
     ["320.499", true, 320n],
     ["320.500", false, 321n],
     ["320.501", false, 321n],
-    ["320.000", true, 320n],
+    ["320.000", false, 320n],
   ];
   for (const [amount, qualifies, roundedAmount] of cases) {
     assert.deepEqual(rounding.classifyUnroundedAmount(amount), {
@@ -71,9 +74,12 @@ test("T4：.499 與 .000 符合，.500 與 .501 不符合", () => {
     });
   }
 
-  const actualSearch = search({ prices: { ...prices, 95: 25 } });
-  assert.ok(actualSearch.candidates.some((candidate) => candidate.rawAmount === "250.250"));
-  assert.equal(actualSearch.candidates.some((candidate) => candidate.rawAmount === "250.500"), false);
+  const actualSearch = search({ prices: { ...prices, 95: 10 } });
+  assert.ok(actualSearch.candidates.some((candidate) => candidate.rawAmount === "100.300"));
+  assert.equal(actualSearch.candidates.some((candidate) => candidate.rawAmount === "100.500"), false);
+  for (const candidate of actualSearch.candidates) {
+    assert.equal(rounding.classifyUnroundedAmount(candidate.rawAmount).qualifies, true);
+  }
 });
 
 test("T5：人工模式直接使用人工油價乘以候選公升數", () => {
@@ -127,7 +133,7 @@ test("T8：32.0 元與 10.00 L 固定案例精確回傳指定前十筆", () => {
   const result = search();
   assert.deepEqual(
     result.candidates.map((candidate) => candidate.targetVolume),
-    ["10.01", "10.04", "10.07", "10.10", "10.13", "10.14", "10.16", "10.17", "10.19", "10.20"],
+    ["10.01", "10.14", "10.17", "10.20", "10.23", "10.26", "10.39", "10.42", "10.45", "10.48"],
   );
   assert.deepEqual(result.candidates[0], {
     rank: 1,
@@ -139,20 +145,21 @@ test("T8：32.0 元與 10.00 L 固定案例精確回傳指定前十筆", () => {
   });
 });
 
-test("T9：只納入 NT$20～NT$3,000，兩端等值皆有效並在上限停止", () => {
+test("T9：只納入 NT$20～NT$3,000，並在上限停止", () => {
   const lowerBoundary = search({
     prices: { ...prices, 95: 20 },
     stopVolume: "0.01",
   });
-  assert.equal(lowerBoundary.candidates[0].targetVolume, "1.00");
-  assert.equal(lowerBoundary.candidates[0].rawAmount, "20.000");
+  assert.equal(lowerBoundary.candidates[0].targetVolume, "1.02");
+  assert.equal(lowerBoundary.candidates[0].rawAmount, "20.400");
   assert.ok(lowerBoundary.candidates.every((candidate) => Number(candidate.rawAmount) >= 20));
 
   const upperBoundary = search({
     prices: { ...prices, 95: 30 },
-    stopVolume: "99.99",
+    stopVolume: "99.97",
   });
-  assert.deepEqual(upperBoundary.candidates.map((candidate) => candidate.rawAmount), ["3000.000"]);
+  assert.deepEqual(upperBoundary.candidates.map((candidate) => candidate.rawAmount), ["2999.400"]);
+  assert.ok(upperBoundary.candidates.every((candidate) => Number(candidate.rawAmount) <= 3000));
   assert.equal(upperBoundary.reason, "amount-limit");
 
   const aboveBoundary = search({
@@ -231,9 +238,9 @@ test("極小自助有效單價會精確跳過不合格區間，不會在 NT$3,00
   assert.equal(result.resultLimitReached, true);
   assert.equal(result.reason, "result-limit");
   assert.equal(result.candidates.length, 10);
-  assert.equal(result.candidates[0].targetVolume, "210000000.00");
-  assert.equal(result.candidates[0].rawAmount, "21.000000000");
-  assert.equal(result.candidates[0].additionalVolume, "5000000.00");
+  assert.equal(result.candidates[0].targetVolume, "213000000.00");
+  assert.equal(result.candidates[0].rawAmount, "21.300000000");
+  assert.equal(result.candidates[0].additionalVolume, "8000000.00");
 });
 
 test("第一頁與第二頁的 P−d 共用規則維持一致", () => {

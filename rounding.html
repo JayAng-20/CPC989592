@@ -9,7 +9,7 @@
     <link rel="icon" href="data:,">
     <meta
       name="description"
-      content="沿用加油回饋排名頁面的台灣中油油價，精確搜尋跳停後最近十個符合金額小數部分小於 0.5 的候選公升數。"
+      content="沿用加油回饋排名頁面的台灣中油油價，精確搜尋未進位金額小數部分介於 0.3（含）至 0.5（不含）的最近十個候選公升數。"
     >
     <title>跳停後金額試算｜台灣中油加油方式比較</title>
     <link rel="stylesheet" href="styles.css">
@@ -48,7 +48,7 @@
         <p class="section-kicker">精確金額規劃</p>
         <h1 id="rounding-title">跳停後金額試算</h1>
         <p>
-          沿用「加油回饋排名」頁面的油價，從下一個 0.01 L 起向上搜尋，找出距離最近的十個候選值。
+          沿用「加油回饋排名」頁面的油價，從下一個 0.01 L 起向上搜尋，找出未進位金額小數部分介於 0.3（含）至 0.5（不含）的最近十個候選公升數。
         </p>
       </section>
 
@@ -136,7 +136,7 @@
                   step="0.01"
                   inputmode="decimal"
                   autocomplete="off"
-                  placeholder="37.42"
+                  placeholder="請輸入目前公升數"
                   aria-describedby="stop-volume-hint stop-volume-error"
                 >
                 <span aria-hidden="true">L</span>
