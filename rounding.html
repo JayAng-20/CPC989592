@@ -14,6 +14,7 @@
     <title>跳停後金額試算｜台灣中油加油方式比較</title>
     <link rel="stylesheet" href="styles.css">
     <script src="calculator.js" defer></script>
+    <script src="price-data.js?version=1" defer></script>
     <script src="rounding-calculator.js" defer></script>
     <script src="rounding.js" defer></script>
   </head>
@@ -47,8 +48,8 @@
       <section class="shell rounding-intro" aria-labelledby="rounding-title">
         <p class="section-kicker">精確金額規劃</p>
         <h1 id="rounding-title">跳停後金額試算</h1>
-        <p>
-          沿用「加油回饋排名」頁面的油價，從下一個 0.01 L 起向上搜尋：五項未進位金額小數部分介於 0.3（含）至 0.4（不含），以及五項精確等於 0.4；合併後依需要增加的公升數排序。
+      <p>
+          沿用目前已同步的台灣中油官方油價，從下一個 0.01 L 起向上搜尋：五項未進位金額小數部分介於 0.3（含）至 0.4（不含），以及五項精確等於 0.4；合併後依需要增加的公升數排序。
         </p>
       </section>
 
@@ -60,8 +61,8 @@
       >
         <p class="section-kicker">需要油價資料</p>
         <h2 id="missing-price-heading">尚未設定油價</h2>
-        <p>尚未設定油價，請先回到「加油回饋排名」頁面輸入 98、95、92 油價。</p>
-        <a class="button primary" href="index.html">回首頁設定油價</a>
+        <p>目前尚未取得台灣中油官方油價，請先回到「加油回饋排名」頁面確認同步狀態。</p>
+        <a class="button primary" href="index.html">回首頁確認油價</a>
       </section>
 
       <div id="rounding-app" hidden>

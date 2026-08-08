@@ -1,0 +1,41 @@
+{
+  "source": "台灣中油政府資料開放平台",
+  "sourceUrl": "https://vipmbr.cpc.com.tw/opendata/MainProdListPrice",
+  "datasetUrl": "https://data.gov.tw/dataset/6339",
+  "retrievedAt": "2026-08-06T15:54:03.000Z",
+  "effectiveDate": "2026-07-27",
+  "prices": {
+    "98": 34,
+    "95": 32,
+    "92": 30.5
+  },
+  "products": {
+    "98": {
+      "productName": "98無鉛汽油",
+      "price": 34,
+      "effectiveDate": "2026-07-27",
+      "unit": "元/ 公升",
+      "deliveryLocation": "中油自營站",
+      "productCode": "113F 1209800",
+      "typeName": "汽柴油零售"
+    },
+    "95": {
+      "productName": "95無鉛汽油",
+      "price": 32,
+      "effectiveDate": "2026-07-27",
+      "unit": "元/ 公升",
+      "deliveryLocation": "中油自營站",
+      "productCode": "113F 1209500",
+      "typeName": "汽柴油零售"
+    },
+    "92": {
+      "productName": "92無鉛汽油",
+      "price": 30.5,
+      "effectiveDate": "2026-07-27",
+      "unit": "元/ 公升",
+      "deliveryLocation": "中油自營站",
+      "productCode": "113F 1209200",
+      "typeName": "汽柴油零售"
+    }
+  }
+}

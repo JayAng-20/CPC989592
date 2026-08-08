@@ -478,7 +478,8 @@ code,
 .price-field.grade-95 { --grade-color: #2782dc; }
 .price-field.grade-92 { --grade-color: #13a687; }
 
-.price-field label {
+.price-field label,
+.price-label {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -512,7 +513,8 @@ code,
   font-weight: 650;
 }
 
-.input-with-unit input {
+.input-with-unit input,
+.input-with-unit output {
   width: 100%;
   min-width: 0;
   padding: 0;
@@ -523,6 +525,19 @@ code,
   font-size: clamp(32px, 4vw, 48px);
   font-weight: 780;
   letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+}
+
+.input-with-unit output {
+  display: block;
+  text-align: left;
+}
+
+.price-effective-date {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -611,6 +626,22 @@ select[aria-invalid="true"] {
 .update-status .status-dot {
   width: 6px;
   height: 6px;
+}
+
+.price-sync-status {
+  margin: 13px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.price-sync-status[data-state="success"] {
+  color: var(--green, #16836c);
+}
+
+.price-sync-status[data-state="warning"],
+.price-sync-status[data-state="error"] {
+  color: var(--red);
 }
 
 .advanced-settings {
@@ -1786,7 +1817,8 @@ select[aria-invalid="true"] {
   }
 
   .price-field .field-hint,
-  .price-field .field-error {
+  .price-field .field-error,
+  .price-field .price-effective-date {
     grid-column: 2;
     margin: -5px 0 0;
   }
@@ -2015,7 +2047,8 @@ select[aria-invalid="true"] {
   }
 
   .price-field .field-hint,
-  .price-field .field-error {
+  .price-field .field-error,
+  .price-field .price-effective-date {
     margin-top: 6px;
   }
 
@@ -2262,7 +2295,8 @@ body {
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.9);
 }
 
-.input-with-unit input {
+.input-with-unit input,
+.input-with-unit output {
   font-weight: 690;
 }
 

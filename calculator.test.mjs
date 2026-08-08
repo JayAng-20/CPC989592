@@ -333,6 +333,25 @@ test("localStorage 設定可儲存、讀取、合併缺省欄位與清除", () =
   assert.equal(calculator.loadPreferences(storage), null);
 });
 
+test("官方同步 metadata 可加入既有 localStorage 並保留進階設定", () => {
+  const storage = new MemoryStorage();
+  const state = calculator.getDefaultState();
+  state.prices = { 98: 35.4, 95: 33.2, 92: 31.7 };
+  state.config.principal = 3500;
+  state.priceMeta = {
+    source: "台灣中油政府資料開放平台",
+    sourceUrl: "https://vipmbr.cpc.com.tw/opendata/MainProdListPrice",
+    effectiveDate: "2026-07-27",
+    retrievedAt: "2026-08-06T15:54:03.000Z",
+  };
+
+  assert.equal(calculator.savePreferences(storage, state), true);
+  const loaded = calculator.loadPreferences(storage);
+  assert.deepEqual(loaded.prices, state.prices);
+  assert.equal(loaded.config.principal, 3500);
+  assert.deepEqual(loaded.priceMeta, state.priceMeta);
+});
+
 test("第二頁共用設定只接受完整油價與自助優惠，不會用預設值補猜", () => {
   const storage = new MemoryStorage();
   assert.equal(calculator.loadSharedFuelState(storage), null);

@@ -714,6 +714,20 @@
     };
   }
 
+  function normalizePriceMeta(rawMeta) {
+    if (!rawMeta || typeof rawMeta !== "object") return null;
+    const effectiveDate = typeof rawMeta.effectiveDate === "string" ? rawMeta.effectiveDate : "";
+    const retrievedAt = typeof rawMeta.retrievedAt === "string" ? rawMeta.retrievedAt : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)) return null;
+    if (!retrievedAt || Number.isNaN(new Date(retrievedAt).getTime())) return null;
+    return {
+      effectiveDate,
+      retrievedAt: new Date(retrievedAt).toISOString(),
+      source: typeof rawMeta.source === "string" ? rawMeta.source : "台灣中油政府資料開放平台",
+      sourceUrl: typeof rawMeta.sourceUrl === "string" ? rawMeta.sourceUrl : "",
+    };
+  }
+
   function savePreferences(storage, state) {
     if (!storage || typeof storage.setItem !== "function") return false;
     const payload = {
@@ -721,6 +735,8 @@
       prices: { ...state.prices },
       config: { ...state.config },
     };
+    const priceMeta = normalizePriceMeta(state.priceMeta);
+    if (priceMeta) payload.priceMeta = priceMeta;
     try {
       storage.setItem(STORAGE_KEY, JSON.stringify(payload));
       return true;
@@ -743,7 +759,7 @@
       };
       const validation = validateInputs(merged.prices, merged.config);
       if (!validation.valid) return null;
-      return {
+      const state = {
         prices: {
           98: toNumber(merged.prices[98]),
           95: toNumber(merged.prices[95]),
@@ -760,6 +776,9 @@
           vipPremiumPointValue: toNumber(merged.config.vipPremiumPointValue),
         },
       };
+      const priceMeta = normalizePriceMeta(payload.priceMeta);
+      if (priceMeta) state.priceMeta = priceMeta;
+      return state;
     } catch (_error) {
       return null;
     }

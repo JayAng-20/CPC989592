@@ -2,9 +2,10 @@
   "use strict";
 
   const calculator = globalThis.CpcCalculator;
+  const priceSource = globalThis.CpcPriceData;
   const roundingCalculator = globalThis.CpcRoundingCalculator;
-  if (!calculator || !roundingCalculator) {
-    throw new Error("試算核心未載入，請確認頁面所需的 JavaScript 檔案位於同一資料夾。");
+  if (!calculator || !priceSource || !roundingCalculator) {
+    throw new Error("試算核心未載入，請確認 calculator.js、price-data.js 與 rounding-calculator.js 位於同一資料夾。");
   }
 
   const elements = {
@@ -27,6 +28,7 @@
   const storage = getStorage();
   let sharedState = null;
   let volumeTouched = false;
+  let stateLoadPromise = null;
 
   function getStorage() {
     try {
@@ -94,13 +96,13 @@
         elements.priceSummary.innerHTML = `
           <span>${grade} 無鉛汽油</span>
           <strong>人工加油：${formatMoney(details.manual)}／L</strong>
-          <small>採用「加油回饋排名」頁面目前保存的牌價</small>
+          <small>採用台灣中油官方牌價${sharedState.priceMeta?.effectiveDate ? `，生效日 ${priceSource.formatEffectiveDate(sharedState.priceMeta.effectiveDate)}` : "（上一筆有效資料）"}</small>
         `;
       } else {
         elements.priceSummary.innerHTML = `
           <span>${grade} 無鉛汽油</span>
           <strong>自助加油：${formatMoney(details.effective)}／L</strong>
-          <small>原價 ${formatMoney(details.manual)}／L－自助優惠 ${formatMoney(details.discount)}／L＝自助價 ${formatMoney(details.effective)}／L</small>
+          <small>原價 ${formatMoney(details.manual)}／L－自助優惠 ${formatMoney(details.discount)}／L＝自助價 ${formatMoney(details.effective)}／L；${sharedState.priceMeta?.effectiveDate ? `牌價生效日 ${priceSource.formatEffectiveDate(sharedState.priceMeta.effectiveDate)}` : "目前使用上一筆有效資料"}</small>
         `;
       }
     } catch (error) {
@@ -232,19 +234,49 @@
     }
   }
 
-  function loadSharedState() {
-    sharedState = calculator.loadSharedFuelState(storage);
+  async function loadSharedStateInternal() {
+    const previousState = calculator.loadSharedFuelState(storage);
+    const knownEffectiveDate = previousState?.priceMeta?.effectiveDate || "";
+
+    try {
+      const officialData = await priceSource.loadPriceData({ knownEffectiveDate });
+      const defaultState = calculator.getDefaultState();
+      sharedState = {
+        prices: { ...officialData.prices },
+        config: previousState?.config || defaultState.config,
+        priceMeta: {
+          effectiveDate: officialData.effectiveDate,
+          retrievedAt: officialData.retrievedAt,
+          source: officialData.source,
+          sourceUrl: officialData.sourceUrl,
+        },
+      };
+      calculator.savePreferences(storage, sharedState);
+    } catch (_error) {
+      sharedState = previousState;
+    }
+
     const hasState = sharedState !== null;
     elements.app.hidden = !hasState;
     elements.missingState.hidden = hasState;
 
     if (!hasState) {
-      elements.resultStatus.textContent = "尚未設定油價。";
+      elements.resultStatus.textContent = "尚未取得官方油價，請先回首頁確認同步狀態。";
       return;
     }
 
     updatePriceSummary();
     calculateAndRender({ announce: false });
+  }
+
+  async function loadSharedState() {
+    if (stateLoadPromise) return stateLoadPromise;
+    stateLoadPromise = loadSharedStateInternal();
+    try {
+      return await stateLoadPromise;
+    } finally {
+      stateLoadPromise = null;
+    }
   }
 
   function applyTheme(theme) {

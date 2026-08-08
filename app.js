@@ -2,8 +2,9 @@
   "use strict";
 
   const calculator = globalThis.CpcCalculator;
-  if (!calculator) {
-    throw new Error("計算核心未載入，請確認 calculator.js 與 index.html 位於同一資料夾。" );
+  const priceSource = globalThis.CpcPriceData;
+  if (!calculator || !priceSource) {
+    throw new Error("計算核心未載入，請確認 calculator.js、price-data.js 與 index.html 位於同一資料夾。" );
   }
 
   const grades = ["98", "95", "92"];
@@ -40,6 +41,7 @@
       minute: "2-digit",
       second: "2-digit",
       hour12: false,
+      timeZone: "Asia/Taipei",
     }),
   };
 
@@ -53,8 +55,9 @@
     validationSummary: document.querySelector("#validation-summary"),
     activityWarning: document.querySelector("#activity-warning"),
     lastUpdated: document.querySelector("#last-updated"),
+    priceSyncStatus: document.querySelector("#price-sync-status"),
     live: document.querySelector("#calculation-live"),
-    resetButton: document.querySelector("#reset-defaults"),
+    updatePriceButton: document.querySelector("#update-latest-price"),
     themeToggle: document.querySelector("#theme-toggle"),
   };
 
@@ -73,6 +76,8 @@
   let chartGrade = "98";
   let rankingGrade = "98";
   let renderFrame = null;
+  let currentPrices = null;
+  let currentPriceData = null;
   const storage = getStorage();
 
   function getStorage() {
@@ -94,11 +99,7 @@
 
   function readForm() {
     return {
-      prices: {
-        98: valueOf("price-98"),
-        95: valueOf("price-95"),
-        92: valueOf("price-92"),
-      },
+      prices: currentPrices,
       config: {
         principal: valueOf("principal"),
         rechargeRate: percentInputToRate(valueOf("recharge-rate")),
@@ -117,7 +118,6 @@
   }
 
   function populateForm(state) {
-    grades.forEach((grade) => setInputValue(`price-${grade}`, state.prices[grade]));
     setInputValue("principal", state.config.principal);
     setInputValue("recharge-rate", state.config.rechargeRate * 100);
     setInputValue("self-discount", state.config.selfServiceDiscount);
@@ -165,14 +165,6 @@
   }
 
   function clearValidation() {
-    grades.forEach((grade) => {
-      const input = document.getElementById(`price-${grade}`);
-      const container = input.closest(".price-field");
-      input.removeAttribute("aria-invalid");
-      container.classList.remove("has-error");
-      document.getElementById(`price-${grade}-error`).textContent = "";
-    });
-
     Object.entries(fieldMap).forEach(([field, id]) => {
       document.getElementById(id).removeAttribute("aria-invalid");
       const error = document.getElementById(`${field}-error`);
@@ -186,14 +178,6 @@
   function showValidation(validation) {
     clearValidation();
     const messages = [];
-
-    Object.entries(validation.priceErrors).forEach(([grade, message]) => {
-      const input = document.getElementById(`price-${grade}`);
-      input.setAttribute("aria-invalid", "true");
-      input.closest(".price-field").classList.add("has-error");
-      document.getElementById(`price-${grade}-error`).textContent = message;
-      messages.push(message);
-    });
 
     validation.configErrors.forEach(({ field, message }) => {
       const inputId = fieldMap[field];
@@ -221,6 +205,11 @@
 
   function calculateAndRender(options) {
     const announce = !options || options.announce !== false;
+    if (!currentPrices) {
+      elements.results.hidden = true;
+      if (announce) elements.live.textContent = "尚未取得台灣中油官方油價，請稍後再試。";
+      return false;
+    }
     const formState = readForm();
     const validation = calculator.validateInputs(formState.prices, formState.config);
     showValidation(validation);
@@ -228,7 +217,6 @@
 
     if (!validation.valid) {
       elements.results.hidden = true;
-      elements.lastUpdated.textContent = "輸入有誤，尚未更新結果";
       if (announce) elements.live.textContent = "輸入有誤，請查看欄位提示。";
       return false;
     }
@@ -238,17 +226,126 @@
     calculator.savePreferences(storage, {
       prices: snapshot.prices,
       config: snapshot.config,
+      priceMeta: currentPriceData,
     });
     elements.results.hidden = false;
 
-    const now = new Date();
-    elements.lastUpdated.innerHTML = `<time datetime="${now.toISOString()}">最後更新 ${formatters.dateTime.format(now)}</time>`;
     if (announce) {
       elements.live.textContent = `計算完成。98、95、92 無鉛目前第一名依序為${grades
         .map((grade) => snapshot.fuels[grade].winner.shortName)
         .join("、")}。`;
     }
     return true;
+  }
+
+  function formatSyncTime(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "—" : formatters.dateTime.format(date);
+  }
+
+  function priceMetaFromData(data) {
+    if (!data) return null;
+    return {
+      effectiveDate: data.effectiveDate || "",
+      retrievedAt: data.retrievedAt || "",
+      source: data.source || "台灣中油政府資料開放平台",
+      sourceUrl: data.sourceUrl || priceSource.OFFICIAL_SOURCE_URL,
+    };
+  }
+
+  function renderPriceCards(data) {
+    currentPriceData = data || null;
+    currentPrices = data ? { ...data.prices } : null;
+    grades.forEach((grade) => {
+      const output = document.getElementById(`price-${grade}`);
+      const effective = document.getElementById(`price-${grade}-effective`);
+      if (!data) {
+        output.textContent = "—";
+        effective.textContent = "牌價生效日期：—";
+        return;
+      }
+      output.textContent = formatters.unitPrice.format(data.prices[grade]);
+      effective.textContent = `牌價生效日期：${data.effectiveDate ? priceSource.formatEffectiveDate(data.effectiveDate) : "上一筆有效資料"}`;
+    });
+
+    if (data && data.retrievedAt) {
+      const formatted = formatSyncTime(data.retrievedAt);
+      elements.lastUpdated.innerHTML = `<time datetime="${new Date(data.retrievedAt).toISOString()}">最後同步：${formatted}</time>`;
+    } else {
+      elements.lastUpdated.textContent = "最後同步：上一筆有效資料（時間未提供）";
+    }
+  }
+
+  function setPriceSyncStatus(message, kind = "") {
+    elements.priceSyncStatus.textContent = message;
+    elements.priceSyncStatus.dataset.state = kind;
+  }
+
+  function staleDataFromState(state) {
+    if (!state || !state.prices) return null;
+    return {
+      source: state.priceMeta?.source || "上一筆有效資料",
+      sourceUrl: state.priceMeta?.sourceUrl || priceSource.OFFICIAL_SOURCE_URL,
+      datasetUrl: priceSource.DATASET_URL,
+      retrievedAt: state.priceMeta?.retrievedAt || "",
+      effectiveDate: state.priceMeta?.effectiveDate || "",
+      prices: { ...state.prices },
+    };
+  }
+
+  function getConfigForSync(previousState) {
+    const rawConfig = readForm().config;
+    const validation = calculator.validateConfiguration(rawConfig);
+    if (validation.valid) return calculator.normalizeConfiguration(rawConfig);
+    return previousState?.config || calculator.getDefaultState().config;
+  }
+
+  async function loadOfficialPrices({ announce = true } = {}) {
+    const previousState = calculator.loadPreferences(storage);
+    const knownEffectiveDate = previousState?.priceMeta?.effectiveDate || "";
+    elements.updatePriceButton.disabled = true;
+    elements.updatePriceButton.setAttribute("aria-busy", "true");
+    setPriceSyncStatus("正在讀取目前已發布的官方油價資料…", "loading");
+
+    try {
+      const data = await priceSource.loadPriceData({ knownEffectiveDate });
+      const state = {
+        prices: { ...data.prices },
+        config: getConfigForSync(previousState),
+        priceMeta: priceMetaFromData(data),
+      };
+      calculator.savePreferences(storage, state);
+      populateForm(state);
+      renderPriceCards(data);
+      setPriceSyncStatus(`已同步台灣中油公告牌價，生效日 ${priceSource.formatEffectiveDate(data.effectiveDate)}。`, "success");
+      calculateAndRender({ announce: false });
+      if (announce) elements.live.textContent = "已重新取得目前已發布的台灣中油官方油價，回饋結果已更新。";
+      return true;
+    } catch (error) {
+      const staleData = staleDataFromState(previousState);
+      if (staleData) {
+        populateForm(previousState);
+        renderPriceCards(staleData);
+        setPriceSyncStatus(
+          `官方油價同步失敗，目前仍使用上一筆有效資料。${error instanceof Error ? `（${error.message}）` : ""}`,
+          "warning",
+        );
+        calculateAndRender({ announce: false });
+        if (announce) elements.live.textContent = "官方油價同步失敗，已保留上一筆有效資料。";
+      } else {
+        renderPriceCards(null);
+        elements.results.hidden = true;
+        setPriceSyncStatus(
+          `目前無法取得官方油價，請稍後再試。${error instanceof Error ? `（${error.message}）` : ""}`,
+          "error",
+        );
+        if (announce) elements.live.textContent = "目前無法取得台灣中油官方油價。";
+      }
+      return false;
+    } finally {
+      elements.updatePriceButton.disabled = false;
+      elements.updatePriceButton.removeAttribute("aria-busy");
+    }
   }
 
   function scheduleCalculation() {
@@ -576,11 +673,8 @@
     if (event.target.matches("input, select")) calculateAndRender({ announce: false });
   });
 
-  elements.resetButton.addEventListener("click", () => {
-    calculator.clearPreferences(storage);
-    populateForm(calculator.getDefaultState());
-    calculateAndRender({ announce: true });
-    elements.live.textContent = "已恢復預設值並重新完成計算。";
+  elements.updatePriceButton.addEventListener("click", () => {
+    loadOfficialPrices({ announce: true });
   });
 
   elements.rankingTables.addEventListener("click", (event) => {
@@ -623,8 +717,13 @@
     }
   });
 
-  const initialState = calculator.loadPreferences(storage) || calculator.getDefaultState();
-  loadTheme();
-  populateForm(initialState);
-  calculateAndRender({ announce: false });
+  async function initialize() {
+    const initialState = calculator.loadPreferences(storage) || calculator.getDefaultState();
+    loadTheme();
+    populateForm(initialState);
+    elements.results.hidden = true;
+    await loadOfficialPrices({ announce: false });
+  }
+
+  initialize();
 })();

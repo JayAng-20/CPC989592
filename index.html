@@ -9,11 +9,12 @@
     <link rel="icon" href="data:,">
     <meta
       name="description"
-      content="比較各種情況哪種方式加油比較划算，依台灣中油 98、95、92 牌價即時計算六種加油方案的精確回饋率與排名。"
+      content="比較各種情況哪種方式加油比較划算，依目前同步的台灣中油 98、95、92 官方公告牌價計算六種加油方案的精確回饋率與排名。"
     >
     <title>比較各種情況哪種方式加油比較划算-台灣中油版</title>
     <link rel="stylesheet" href="styles.css">
     <script src="calculator.js" defer></script>
+    <script src="price-data.js?version=1" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -68,80 +69,68 @@
         <div class="section-heading compact">
           <div>
             <p class="section-kicker">目前油價</p>
-            <h2 id="price-heading">輸入三種汽油牌價</h2>
+            <h2 id="price-heading">台灣中油最新公告油價</h2>
           </div>
-          <p>支援小數，調整後即時計算</p>
+          <p>官方牌價資料定期同步，回饋結果會依最新資料重新計算</p>
         </div>
 
         <form id="calculator-form" novalidate>
           <div class="price-grid">
             <div class="price-field grade-98">
-              <label for="price-98">
+              <div class="price-label">
                 <span class="fuel-grade">98</span>
-                <span>無鉛牌價</span>
-              </label>
-              <div class="input-with-unit">
+                <span>98 無鉛汽油</span>
+              </div>
+              <div class="input-with-unit readonly-price">
                 <span class="currency" aria-hidden="true">$</span>
-                <input
+                <output
                   id="price-98"
-                  name="price-98"
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  inputmode="decimal"
-                  value="34.0"
-                  aria-describedby="price-98-hint price-98-error"
-                >
+                  aria-live="polite"
+                  aria-label="98 無鉛汽油官方牌價"
+                  aria-describedby="price-98-hint price-98-effective"
+                >—</output>
                 <span>元／L</span>
               </div>
-              <p class="field-hint" id="price-98-hint">預設 34.0 元</p>
-              <p class="field-error" id="price-98-error" role="alert"></p>
+              <p class="field-hint" id="price-98-hint">中油公告牌價</p>
+              <p class="price-effective-date" id="price-98-effective">牌價生效日期：—</p>
             </div>
 
             <div class="price-field grade-95">
-              <label for="price-95">
+              <div class="price-label">
                 <span class="fuel-grade">95</span>
-                <span>無鉛牌價</span>
-              </label>
-              <div class="input-with-unit">
+                <span>95 無鉛汽油</span>
+              </div>
+              <div class="input-with-unit readonly-price">
                 <span class="currency" aria-hidden="true">$</span>
-                <input
+                <output
                   id="price-95"
-                  name="price-95"
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  inputmode="decimal"
-                  value="32.0"
-                  aria-describedby="price-95-hint price-95-error"
-                >
+                  aria-live="polite"
+                  aria-label="95 無鉛汽油官方牌價"
+                  aria-describedby="price-95-hint price-95-effective"
+                >—</output>
                 <span>元／L</span>
               </div>
-              <p class="field-hint" id="price-95-hint">預設 32.0 元</p>
-              <p class="field-error" id="price-95-error" role="alert"></p>
+              <p class="field-hint" id="price-95-hint">中油公告牌價</p>
+              <p class="price-effective-date" id="price-95-effective">牌價生效日期：—</p>
             </div>
 
             <div class="price-field grade-92">
-              <label for="price-92">
+              <div class="price-label">
                 <span class="fuel-grade">92</span>
-                <span>無鉛牌價</span>
-              </label>
-              <div class="input-with-unit">
+                <span>92 無鉛汽油</span>
+              </div>
+              <div class="input-with-unit readonly-price">
                 <span class="currency" aria-hidden="true">$</span>
-                <input
+                <output
                   id="price-92"
-                  name="price-92"
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  inputmode="decimal"
-                  value="30.5"
-                  aria-describedby="price-92-hint price-92-error"
-                >
+                  aria-live="polite"
+                  aria-label="92 無鉛汽油官方牌價"
+                  aria-describedby="price-92-hint price-92-effective"
+                >—</output>
                 <span>元／L</span>
               </div>
-              <p class="field-hint" id="price-92-hint">預設 30.5 元</p>
-              <p class="field-error" id="price-92-error" role="alert"></p>
+              <p class="field-hint" id="price-92-hint">中油公告牌價</p>
+              <p class="price-effective-date" id="price-92-effective">牌價生效日期：—</p>
             </div>
           </div>
 
@@ -149,12 +138,16 @@
             <button class="button primary" id="recalculate" type="submit">
               <span aria-hidden="true">↻</span>重新計算
             </button>
-            <button class="button secondary" id="reset-defaults" type="button">恢復預設值</button>
+            <button class="button secondary" id="update-latest-price" type="button">
+              <span aria-hidden="true">↻</span>更新最新牌價
+            </button>
             <div class="update-status">
               <span class="status-dot" aria-hidden="true"></span>
-              <span id="last-updated">準備計算中</span>
+              <span id="last-updated">最後同步：讀取中</span>
             </div>
           </div>
+
+          <p id="price-sync-status" class="price-sync-status" role="status" aria-live="polite"></p>
 
           <details class="advanced-settings" id="advanced-settings">
             <summary>
