@@ -1,1 +1,57 @@
+name: 更新台灣中油官方油價
+
+on:
+  schedule:
+    # GitHub Actions 使用 UTC；16:17 UTC 約為台灣時間每日 00:17。
+    - cron: "17 16 * * *"
+    # 台灣時間每週一 01:17、02:17 的額外重試。
+    - cron: "17 17 * * 0"
+    - cron: "17 18 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-cpc-prices
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: 取得並驗證中油牌價
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 讀取儲存庫
+        uses: actions/checkout@v4
+
+      - name: 設定 Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 執行完整計算與同步測試
+        run: npm test
+
+      - name: 讀取官方 JSON 並更新資料檔
+        id: update
+        run: node app.js update
+
+      - name: 建立資料更新 commit
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/cpc-prices.json
+          if git diff --cached --quiet; then
+            echo "資料檔沒有實際變更，不建立空 commit。"
+            exit 0
+          fi
+          git commit -m "chore: update CPC fuel prices"
+          git push
+
+      - name: 確認沒有不必要變更
+        if: steps.update.outputs.changed == 'false'
+        run: echo "油價未變更，略過 commit 與 push。"
 
