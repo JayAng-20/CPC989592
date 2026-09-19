@@ -1,0 +1,15 @@
+{
+  "name": "cpc-fuel-rewards-calculator",
+  "version": "2.0.0",
+  "private": true,
+  "description": "台灣中油六種加油方式精確回饋計算、動態排名與跳停後金額試算",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test app.test.mjs",
+    "serve": "node app.js serve --port 8080",
+    "update:prices": "node app.js update"
+  }
+}
+
